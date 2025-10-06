@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<HTML lang = 'en'>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoZet Dashboard</title>
+    <link rel="stylesheet" type = "text/css"
+     href="{{url_for('static', filename='style.css') }}"/>
+
+</head>
+<body>
+<h1>CoZet Dashboard</h1>
+<div class="dashboard-container">
+    <div class="tile tile-input">
+    <form method="post" action="{{ url_for('section1_result')}}" id="calculator_form">
+        
+            <label for="ZetNum">Number of ZETs in a day </label>
+            <input type="number" name="ZetNum" id="ZetNum" value="{{ ZetNum if ZetNum is defined else '' }}">
+            <br/>
+            <label for="highwayLength">Length of the Highway (km) </label>
+            <input type="number" name="highwayLength" id="highwayLength" value="{{ highwayLength if highwayLength is defined else '' }}">
+            <br/>
+            <label for="state">Select your State</label>
+            <select id="state" name="state">
+                <option value="">--Select--</option>
+                <option value="TN" {% if state == 'TN' %}selected{% endif %}>Tamil Nadu</option>
+                <option value="KA" {% if state == 'KA' %}selected{% endif %}>Karnataka</option>
+            </select>
+            <br/>
+            <!-- <label for="investmentType">Select your Investment Type</label> --> 
+            <label for="investmentType">
+                    Select your Investment Type
+                    <span class="info-icon" tabindex="0">&#x1F6C8; 
+                        <span class="tooltip-text">
+                            <strong>Captive Power plants (CPPs)</strong> are owned by a single entity with full upfront investment.<br>
+                            <br/>
+                            <strong>Group Captive Power plants (GCPPs)</strong> allows shared investment by multiple entities, with participants owning at least 26% and consuming 51% of the generated power.
+                        </span>
+                    </span>
+            </label>
+            <select id="investmentType" name="investmentType">
+                <option value="">--Select--</option>
+                <option value="C" {% if investmentType == 'C' %}selected{% endif %}>Captive</option>
+                <option value="GC" {% if investmentType == 'GC' %}selected{% endif %}>Group Captive</option>
+            </select>
+            <br/>
+            <label for="solar">Solar (%) </label>
+            <div class="slidecontainer">
+                <input type="range" min="1" max="100" value="{{ solar if solar is defined else 50 }}" class="slider" id="solar" name="solar" oninput="updateSolarValue(this.value)">
+                <span id="solarValue">{{ solar if solar is defined else 50 }}</span>%
+            </div>
+            <br/>
+
+            <input type="submit" value="Submit"/>
+            <input type="reset"  value="RESET"/>
+        </form>
+    </div>
+    <div class="tile-row">
+    <div class="tile tile-output">
+        <h2>Energy Required per day</h2>
+        <!-- <p id="energy_required_per_day_output" class="output-value"></p> -->
+                {% if calculation_success == True %}
+                    <!-- <p>{{energy_required_per_day}} kWh/day</p> -->
+                    <p id="energy_required_per_day_output" class="output-value">{{energy_required_per_day}} kWh/day</p>
+                {% elif calculation_success == False %}
+                    <p id="energy_required_per_day_output" class="output-value">{{error}}</p>
+                    <!-- <p>{{error}}</p> -->
+                {% else %}
+                    <p id="energy_required_per_day_output" class="output-value">--</p>
+                    <!-- <p>--</p> -->
+        {% endif %}
+    </div>
+    <div class="tile tile-output">
+        <h2>Required RE Capacity</h2>
+        <!-- <p id="required_re_capacity_output" class="output-value"></p> -->
+        {% if calculation_success == True %}
+            <p id="required_re_capacity_output" class="output-value">Solar: {{required_re_capacity_solar}} MW</p>
+            <p id="required_re_capacity_output" class="output-value">Wind: {{required_re_capacity_wind}} MW</p>
+            <p id="required_re_capacity_output" class="output-value">Total: {{required_re_capacity}} MW</p>
+        {% elif calculation_success == False %}
+            <p id="required_re_capacity_output" class="output-value">{{error}}</p>
+        {% else %}
+            <p id="required_re_capacity_output" class="output-value">--</p>
+        {% endif %}
+    </div>
+    <div class="tile tile-output">
+        <h2>Land Required</h2>
+        <!-- <p id="land_required_output" class="output-value"></p> -->
+        {% if calculation_success == True %}
+            <p id="land_required_output" class="output-value">{{total_land_required_for_re_infrastructure}} acres</p>
+        {% else %}
+            <p id="land_required_output" class="output-value">--</p>
+        {% endif %}
+    </div>
+</div>
+<div class="tile-row">
+    <div class="tile tile-output">
+        <h2>Annual Cost Savings</h2>
+        <!-- <p id="annual_cost_savings_output" class="output-value"></p> -->
+        {% if calculation_success == True %}
+            <p id="annual_cost_savings_output" class="output-value">₹{{annual_cost_savings}}</p>
+        {% else %}
+            <p id="annual_cost_savings_output" class="output-value">--</p>
+        {% endif %}
+    </div>
+    <div class="tile tile-output">
+        <h2>CO2 Emissions</h2>
+        <!-- <p id="co2_emissions_output" class="output-value"></p> -->
+        {% if calculation_success == True %}
+            <p id="co2_emissions_output" class="output-value">Grid: {{emissions_for_coal_powered}} tCO2</p>
+            <p id="co2_emissions_output" class="output-value">RE: {{emissions_for_re_powered}} tCO2</p>
+        {% else %}
+            <p id="co2_emissions_output" class="output-value">--</p>
+        {% endif %}
+    </div>
+    <div class="tile tile-output">
+        <h2>CO2 Emissions Reduced by</h2>
+        <!-- <p id="emissions reduced_by_output" class="output-value"></p> -->
+        {% if calculation_success == True %}
+            <p id="co2_emissions_output" class="output-value">{{percentage_decrease_in_emissions}} %</p>
+        {% else %}
+            <p id="co2_emissions_output" class="output-value">--</p>
+        {% endif %}
+    </div>
+</div class ="tile-row">
+    <div class ="tile tile-output">
+        <h2>Total Cost</h2>
+        <!-- <p id="total_cost_output" class="output-value"></p> -->
+        {% if calculation_success == True %}
+            <p id="total_cost_output" class="output-value">₹{{total_cost_incurred}}</p>
+        {% elif calculation_success == False %}
+            <p id="total_cost_output" class="output-value">{{error}}</p>
+        {% else %}
+            <p id="total_cost_output" class="output-value">--</p>
+        {% endif %}
+    </div>
+</div>
+ 
+<script>
+function updateSolarValue(val) {
+    document.getElementById('solarValue').textContent = val;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var slider = document.getElementById('solar');
+    var solarValue = document.getElementById('solarValue');
+    updateSolarValue(slider.value);
+
+    var form = document.getElementById('calculator_form');
+    form.addEventListener('reset', function() {
+        setTimeout(function() {
+            document.getElementById('ZetNum').value = '';
+            document.getElementById('highwayLength').value = '';
+            document.getElementById('state').selectedIndex = 0;
+            document.getElementById('investmentType').selectedIndex = 0;
+            document.getElementById('investmentType').selectedIndex = 0;
+            slider.value = 50;
+            updateSolarValue(50);
+
+
+            var outputs = document.querySelectorAll('.output-value');
+            outputs.forEach(function(el) {
+                el.textContent = '--';
+              });  
+        }, 0);
+    });
+});
+</script>
+</body>
+</HTML>
