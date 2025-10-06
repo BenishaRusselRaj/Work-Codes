@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        :root {
+            --primary: #626F47;
+            --secondary: #A4B465;
+            --light: #F5ECD5;
+            --accent: #bd761a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, var(--light) 0%, #e8dcc0 100%);
+            padding: 2%;
+            min-height: 100vh;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 2%;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2%;
+            height: 90vh;
+        }
+
+        .row {
+            display: flex;
+            gap: 2%;
+        }
+
+        .tile {
+            background: white;
+            border-radius: 15px;
+            padding: 2%;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border: 2px solid var(--secondary);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .tile:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.2);
+        }
+
+        /* Row 1 - Input Tile */
+        .row-1 {
+            height: 20%;
+        }
+
+        .input-tile {
+            width: 100%;
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+            color: white;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 3%;
+            margin-bottom: 3%;
+        }
+
+        .input-group {
+            flex: 1;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.9);
+            color: var(--primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            background: white;
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(255,255,255,0.5);
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 2%;
+            margin-top: 2%;
+        }
+
+        .slider-label {
+            font-weight: bold;
+            min-width: 80px;
+        }
+
+        .slider-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.3);
+            outline: none;
+            /* -webkit-appearance: none; */
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .slider-values {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
+        /* Row 2 - Output Tiles */
+        .row-2 {
+            height: 25%;
+        }
+
+        .row-2 .tile {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: linear-gradient(135deg, var(--light) 0%, white 100%);
+        }
+
+        .tile-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .gauge-container {
+            width: 150px;
+            height: 150px;
+            position: relative;
+        }
+
+        .capacity-display, .land-display {
+            font-size: 1.1rem;
+            color: var(--primary);
+            line-height: 1.6;
+        }
+
+        .capacity-value, .land-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        /* Row 3 - Investment Type */
+        .row-3 {
+            height: 15%;
+        }
+
+        .investment-tile {
+            width: 70%;
+            background: linear-gradient(135deg, var(--accent) 0%, #d4841f 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 2%;
+        }
+
+        .total-cost-tile {
+            width: 30%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+            margin-left: 10px;
+        }
+
+        .tooltip-icon {
+            width: 20px;
+            height: 20px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .tooltip-text {
+            visibility: hidden;
+            width: 300px;
+            background-color: var(--primary);
+            color: white;
+            text-align: left;
+            border-radius: 8px;
+            padding: 15px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .cost-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        /* Row 4 - Charts */
+        .row-4 {
+            height: 30%;
+        }
+
+        .row-4 .tile {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, var(--light) 0%, white 100%);
+        }
+
+        .chart-container {
+            flex: 1;
+            display: flex;
+            align-items: end;
+            justify-content: center;
+            gap: 20%;
+            margin: 20px 0;
+        }
+
+        .bar {
+            width: 80px;
+            border-radius: 8px 8px 0 0;
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .bar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .coal-bar {
+            background: linear-gradient(to top, #8B4513, #CD853F);
+        }
+
+        .re-bar {
+            background: linear-gradient(to top, var(--secondary), var(--primary));
+        }
+
+        .emission-coal-bar {
+            background: linear-gradient(to top, #DC143C, #FF6347);
+        }
+
+        .emission-re-bar {
+            background: linear-gradient(to top, #228B22, #32CD32);
+        }
+        
+
+        .bar-label {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: var(--primary);
+            white-space: nowrap;
+        }
+
+        .bar-title {
+            margin-top: 10px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+
+        .savings-text, .emissions-text {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 1.1rem;
+            color: var(--primary);
+        }
+
+        .savings-amount, .emissions-amount {
+            color: var(--accent);
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+
+        .error-message {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .input-row {
+                flex-direction: column;
+            }
+            
+            .row-2, .row-4 {
+                flex-direction: column;
+            }
+            
+            .row-3 {
+                flex-direction: column;
+            }
+            
+            .investment-tile, .total-cost-tile {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Dashboard</h1>
+    <div class="dashboard-container">
+        <!-- Row 1: Input Tile -->
+        <div class="row row-1">
+            <div class="tile input-tile">
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Number of ZETs in a day</label>
+                        <input type="number" id="zetNum" placeholder="Enter number" min="0" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label>Length of the Highway (km)</label>
+                        <input type="number" id="highwayLength" placeholder="Enter length" min="0" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label>Select your State</label>
+                        <select id="state">
+                            <option value="">—Select—</option>
+                            <option value="TN">Tamil Nadu</option>
+                            <option value="KA">Karnataka</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="slider-container">
+                    <span class="slider-label">Solar (%)</span>
+                    <div class="slider-wrapper">
+                        <input type="range" id="solarSlider" min="0" max="100" value="50">
+                        <div class="slider-values">
+                            <span id="solarValue">50%</span>
+                            <span id="windValue">50%</span>
+                        </div>
+                    </div>
+                    <span class="slider-label">Wind (%)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 2: Output Tiles -->
+        <div class="row row-2">
+            <div class="tile">
+                <div class="tile-title">Energy Required Per Day</div>
+                <div class="gauge-container">
+                    <canvas id="gaugeChart" width="150" height="150"></canvas>
+                </div>
+                <div id="energyValue" style="font-size: 1.2rem; font-weight: bold; color: var(--accent); margin-top: 10px;">0 kWh</div>
+            </div>
+            
+            <div class="tile">
+                <div class="tile-title">Required RE Capacity</div>
+                <div class="capacity-display">
+                    <div>Solar: <span id="solarCapacity" class="capacity-value">0</span> MW</div>
+                    <div>Wind: <span id="windCapacity" class="capacity-value">0</span> MW</div>
+                    <div style="margin-top: 10px; border-top: 2px solid var(--secondary); padding-top: 10px;">
+                        Total: <span id="totalCapacity" class="capacity-value">0</span> MW
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tile">
+                <div class="tile-title">Land Required</div>
+                <div class="land-display">
+                    <div class="land-value" id="landRequired">0 acres</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 3: Investment Type -->
+        <div class="row row-3">
+            <div class="tile investment-tile">
+                <div style="flex: 1;">
+                    <label style="font-size: 1.2rem; font-weight: bold;">
+                        Select your investment type
+                        <div class="tooltip">
+                            <div class="tooltip-icon">i</div>
+                            <div class="tooltip-text">
+                                Captive Power plants (CPPs) are owned by a single entity with full upfront investment.<br><br>
+                                Group Captive Power plants (GCPPs) allow shared investment by multiple entities, with participants owning at least 26% and consuming 51% of the generated power.
+                            </div>
+                        </div>
+                    </label>
+                    <select id="investmentType" style="width: 100%; margin-top: 15px; padding: 12px; border: none; border-radius: 8px; font-size: 1rem;">
+                        <option value="">—Select—</option>
+                        <option value="C">Captive</option>
+                        <option value="GC">Group Captive</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="tile total-cost-tile">
+                <div class="tile-title">Total Cost</div>
+                <div id="totalCost" class="cost-value">₹0</div>
+            </div>
+        </div>
+
+        <!-- Row 4: Charts -->
+        <div class="row row-4">
+            <div class="tile">
+                <div class="tile-title">Annual Cost Comparison</div>
+                <div class="chart-container">
+                    <div class="bar-group">
+                        <div id="coalCostBar" class="bar coal-bar" style="height: 0px;">
+                            <div class="bar-label" id="coalCostLabel">₹0</div>
+                        </div>
+                        <div class="bar-title">Coal Powered</div>
+                    </div>
+                    <div class="bar-group">
+                        <div id="reCostBar" class="bar re-bar" style="height: 0px;">
+                            <div class="bar-label" id="reCostLabel">₹0</div>
+                        </div>
+                        <div class="bar-title">RE Powered</div>
+                    </div>
+                </div>
+                <div class="savings-text">
+                    You save <span id="savingsAmount" class="savings-amount">₹0</span>
+                </div>
+            </div>
+            
+            <div class="tile">
+                <div class="tile-title">Annual Emissions Comparison</div>
+                <div class="chart-container">
+                    <div class="bar-group">
+                        <div id="coalEmissionBar" class="bar emission-coal-bar" style="height: 0px;">
+                            <div class="bar-label" id="coalEmissionLabel">0 kg</div>
+                        </div>
+                        <div class="bar-title">Coal Powered</div>
+                    </div>
+                    <div class="bar-group">
+                        <div id="reEmissionBar" class="bar emission-re-bar" style="height: 0px;">
+                            <div class="bar-label" id="reEmissionLabel">0 kg</div>
+                        </div>
+                        <div class="bar-title">RE Powered</div>
+                    </div>
+                </div>
+                <div class="emissions-text">
+                    Your emissions are reduced by <span id="emissionsReduction" class="emissions-amount">0%</span>
+                </div>
+            </div>
+        </div>
+        
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Number formatting function
+        function numberFormat(number) {
+            const s = String(Math.abs(Math.floor(number)));
+            if (s.length <= 3) {
+                return s;
+            } else {
+                const last3 = s.slice(-3);
+                let rest = s.slice(0, -3);
+                const parts = [];
+                while (rest.length > 2) {
+                    parts.push(rest.slice(-2));
+                    rest = rest.slice(0, -2);
+                }
+                if (rest) {
+                    parts.push(rest);
+                }
+                return parts.reverse().join(',') + ',' + last3;
+            }
+        }
+
+        // Draw gauge chart
+        function drawGauge(value, maxValue = 1000) {
+            const canvas = document.getElementById('gaugeChart');
+            const ctx = canvas.getContext('2d');
+            const centerX = 75;
+            const centerY = 75;
+            const radius = 60;
+            
+            ctx.clearRect(0, 0, 150, 150);
+            
+            // Draw background arc
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, Math.PI, 2 * Math.PI);
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 10;
+            ctx.stroke();
+            
+            // Draw value arc
+            const angle = Math.PI + (Math.PI * Math.min(value / maxValue, 1));
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, Math.PI, angle);
+            ctx.strokeStyle = '#A4B465';
+            ctx.lineWidth = 10;
+            ctx.stroke();
+            
+            // Draw needle
+            const needleAngle = Math.PI + (Math.PI * Math.min(value / maxValue, 1));
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(
+                centerX + Math.cos(needleAngle) * (radius - 15),
+                centerY + Math.sin(needleAngle) * (radius - 15)
+            );
+            ctx.strokeStyle = '#bd761a';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Draw center circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
+            ctx.fillStyle = '#bd761a';
+            ctx.fill();
+        }
+
+        // Update slider values
+        document.getElementById('solarSlider').addEventListener('input', function() {
+            const solarValue = this.value;
+            const windValue = 100 - solarValue;
+            document.getElementById('solarValue').textContent = solarValue + '%';
+            document.getElementById('windValue').textContent = windValue + '%';
+            calculateBasicOutputs();
+        });
+
+        // Add event listeners for basic calculation
+        document.getElementById('zetNum').addEventListener('input', calculateBasicOutputs);
+        document.getElementById('highwayLength').addEventListener('input', calculateBasicOutputs);
+        document.getElementById('state').addEventListener('change', calculateBasicOutputs);
+        document.getElementById('investmentType').addEventListener('change', calculateFullOutputs);
+
+        function calculateBasicOutputs() {
+            try {
+                const zetNum = parseFloat(document.getElementById('zetNum').value) || 0;
+                const highwayLength = parseFloat(document.getElementById('highwayLength').value) || 0;
+                const state = document.getElementById('state').value;
+                const solarPercentage = parseFloat(document.getElementById('solarSlider').value) / 100;
+                
+                if (zetNum === 0 || highwayLength === 0 || !state) {
+                    resetBasicOutputs();
+                    return;
+                }
+
+                // Constants
+                const truckCapacity = 230;
+                const truckRange = 208;
+                const chargeAvailableInVehicle = 0.5;
+                const solarOutputPerKw = 4.5;
+                const windOutputPerKw = 7.2;
+                const landRequiredSolarPerMw = 3.5;
+                const landRequiredWindPerMw = 1.5;
+
+                // Calculations
+                const frequencyOfCharging = highwayLength / truckRange;
+                let noOfVehiclesToChargePerDay;
+                
+                if (frequencyOfCharging > 1) {
+                    noOfVehiclesToChargePerDay = (1 * zetNum * chargeAvailableInVehicle) + (zetNum * (frequencyOfCharging - 1));
+                } else {
+                    noOfVehiclesToChargePerDay = zetNum * frequencyOfCharging * chargeAvailableInVehicle;
+                }
+
+                const energyRequiredPerDay = truckCapacity * noOfVehiclesToChargePerDay;
+                const requiredReCapacitySolar = ((energyRequiredPerDay * solarPercentage) / solarOutputPerKw) / 1000;
+                const requiredReCapacityWind = ((energyRequiredPerDay * (1 - solarPercentage)) / windOutputPerKw) / 1000;
+                const requiredReCapacity = requiredReCapacitySolar + requiredReCapacityWind;
+                const totalLandRequired = (landRequiredSolarPerMw * requiredReCapacitySolar) + (landRequiredWindPerMw * requiredReCapacityWind);
+
+                // Update displays
+                document.getElementById('energyValue').textContent = Math.round(energyRequiredPerDay * 100) / 100 + ' kWh';
+                document.getElementById('solarCapacity').textContent = Math.round(requiredReCapacitySolar * 100) / 100;
+                document.getElementById('windCapacity').textContent = Math.round(requiredReCapacityWind * 100) / 100;
+                document.getElementById('totalCapacity').textContent = Math.round(requiredReCapacity * 100) / 100;
+                document.getElementById('landRequired').textContent = Math.round(totalLandRequired * 100) / 100 + ' acres';
+
+                // Draw gauge
+                drawGauge(energyRequiredPerDay, Math.max(1000, energyRequiredPerDay * 1.2));
+
+                // Calculate full outputs if investment type is selected
+                calculateFullOutputs();
+
+            } catch (error) {
+                showError('Calculation error: ' + error.message);
+            }
+        }
+
+        function calculateFullOutputs() {
+            try {
+                const zetNum = parseFloat(document.getElementById('zetNum').value) || 0;
+                const highwayLength = parseFloat(document.getElementById('highwayLength').value) || 0;
+                const state = document.getElementById('state').value;
+                const solarPercentage = parseFloat(document.getElementById('solarSlider').value) / 100;
+                const investmentType = document.getElementById('investmentType').value;
+                
+                if (zetNum === 0 || highwayLength === 0 || !state || !investmentType) {
+                    resetFullOutputs();
+                    return;
+                }
+
+                // Constants
+                const truckCapacity = 230;
+                const truckRange = 208;
+                const chargeAvailableInVehicle = 0.5;
+                const solarOutputPerKw = 4.5;
+                const windOutputPerKw = 7.2;
+                const perUnitDGCost = 31.33;
+                const meterRent = 3965;
+                const converterCostPerKw = 3700;
+                const reMaintenanceCostPercent = 0.014;
+                const gridPerUnitEmissions = 0.727;
+                const windPerUnitEmissions = 0.126;
+                const solarPerUnitEmissions = 0.045;
+                const windPerUnitGroupCaptive = 4.52;
+                const solarPerUnitGroupCaptive = 4.57;
+                const captiveSolarPerMw = 34400000;
+                const captiveWindPerMw = 80500000;
+                const groupCaptiveSolarPerMw = 3200000;
+                const groupCaptiveWindPerMw = 7000000;
+
+                // Basic calculations
+                const frequencyOfCharging = highwayLength / truckRange;
+                let noOfVehiclesToChargePerDay;
+                
+                if (frequencyOfCharging > 1) {
+                    noOfVehiclesToChargePerDay = (1 * zetNum * chargeAvailableInVehicle) + (zetNum * (frequencyOfCharging - 1));
+                } else {
+                    noOfVehiclesToChargePerDay = zetNum * frequencyOfCharging * chargeAvailableInVehicle;
+                }
+
+                const energyRequiredPerDay = truckCapacity * noOfVehiclesToChargePerDay;
+                const requiredReCapacitySolar = ((energyRequiredPerDay * solarPercentage) / solarOutputPerKw) / 1000;
+                const requiredReCapacityWind = ((energyRequiredPerDay * (1 - solarPercentage)) / windOutputPerKw) / 1000;
+                
+                const energyRequiredPerHour = energyRequiredPerDay / 24;
+                const demandKw = 500 * Math.round(energyRequiredPerHour / 500);
+                const totalConverterCost = converterCostPerKw * 2 * demandKw;
+
+                // State-specific values
+                let perUnitGridRate, demandCharges, solarTnd, windTnd;
+                if (state === 'TN') {
+                    perUnitGridRate = 8.2;
+                    demandCharges = 145;
+                    solarTnd = 1.25;
+                    windTnd = 1.19;
+                } else if (state === 'KA') {
+                    perUnitGridRate = 7.4;
+                    demandCharges = 80;
+                    solarTnd = 1.31;
+                    windTnd = 1.43;
+                }
+
+                const coalPoweredCostPerMonth = ((energyRequiredPerDay * 0.95 * perUnitGridRate) + 
+                                                (energyRequiredPerDay * 0.05 * perUnitDGCost) + 
+                                                (demandKw * demandCharges) + 
+                                                meterRent) * 30;
+
+                let reTotalCost, reCostPerMonth;
+                
+                if (investmentType === 'C') {
+                    reTotalCost = (captiveSolarPerMw * requiredReCapacitySolar) + (captiveWindPerMw * requiredReCapacityWind);
+                    reCostPerMonth = ((energyRequiredPerDay * 0.075 * 8.2) +
+                                     (energyRequiredPerDay * 0.025 * perUnitDGCost) +
+                                     (demandKw * demandCharges) + 
+                                     meterRent +
+                                     (energyRequiredPerDay * 0.9 * solarPercentage * solarTnd) +
+                                     (energyRequiredPerDay * 0.9 * (1 - solarPercentage) * windTnd)) * 30;
+                } else if (investmentType === 'GC') {
+                    reTotalCost = (groupCaptiveSolarPerMw * requiredReCapacitySolar) + (groupCaptiveWindPerMw * requiredReCapacityWind);
+                    reCostPerMonth = ((energyRequiredPerDay * 0.075 * 8.2) +
+                                     (energyRequiredPerDay * 0.025 * perUnitDGCost) +
+                                     (demandKw * demandCharges) + 
+                                     meterRent +
+                                     (energyRequiredPerDay * 0.9 * solarPercentage * solarPerUnitGroupCaptive) +
+                                     (energyRequiredPerDay * 0.9 * (1 - solarPercentage) * windPerUnitGroupCaptive)) * 30;
+                }
+
+                const totalCostIncurred = reTotalCost + totalConverterCost;
+                const annualCostSavings = (coalPoweredCostPerMonth - reCostPerMonth) * 12;
+                
+                // Emissions
+                const emissionsForCoalPowered = energyRequiredPerDay * 0.03 * gridPerUnitEmissions;
+                const emissionsForRePowered = (energyRequiredPerDay * 0.03 * windPerUnitEmissions * (1 - solarPercentage)) +
+                                             (energyRequiredPerDay * 0.03 * solarPerUnitEmissions * solarPercentage);
+                const percentageDecreaseInEmissions = ((emissionsForCoalPowered - emissionsForRePowered) / emissionsForCoalPowered) * 100;
+
+                // Update displays
+                document.getElementById('totalCost').textContent = '₹' + numberFormat(totalCostIncurred);
+                document.getElementById('coalCostLabel').textContent = '₹' + numberFormat(coalPoweredCostPerMonth * 12);
+                document.getElementById('reCostLabel').textContent = '₹' + numberFormat(reCostPerMonth * 12);
+                document.getElementById('savingsAmount').textContent = '₹' + numberFormat(annualCostSavings);
+                
+                document.getElementById('coalEmissionLabel').textContent = Math.round(emissionsForCoalPowered) + ' kg';
+                document.getElementById('reEmissionLabel').textContent = Math.round(emissionsForRePowered) + ' kg';
+                document.getElementById('emissionsReduction').textContent = Math.round(percentageDecreaseInEmissions) + '%';
+
+                // Update bar charts
+                updateCostChart(coalPoweredCostPerMonth * 12, reCostPerMonth * 12);
+                updateEmissionChart(emissionsForCoalPowered, emissionsForRePowered);
+
+                hideError();
+
+            } catch (error) {
+                showError('Calculation error: ' + error.message);
+            }
+        }
+
+        function updateCostChart(coalCost, reCost) {
+            const maxCost = Math.max(coalCost, reCost);
+            const maxHeight = 120;
+            
+            const coalHeight = (coalCost / maxCost) * maxHeight;
+            const reHeight = (reCost / maxCost) * maxHeight;
+            
+            document.getElementById('coalCostBar').style.height = coalHeight + 'px';
+            document.getElementById('reCostBar').style.height = reHeight + 'px';
+        }
+
+        function updateEmissionChart(coalEmission, reEmission) {
+            const maxEmission = Math.max(coalEmission, reEmission);
+            const maxHeight = 120;
+            
+            const coalHeight = (coalEmission / maxEmission) * maxHeight;
+            const reHeight = (reEmission / maxEmission) * maxHeight;
+            
+            document.getElementById('coalEmissionBar').style.height = coalHeight + 'px';
+            document.getElementById('reEmissionBar').style.height = reHeight + 'px';
+        }
+
+        function resetBasicOutputs() {
+            document.getElementById('energyValue').textContent = '0 kWh';
+            document.getElementById('solarCapacity').textContent = '0';
+            document.getElementById('windCapacity').textContent = '0';
+            document.getElementById('totalCapacity').textContent = '0';
+            document.getElementById('landRequired').textContent = '0 acres';
+            drawGauge(0);
+        }
+
+        function resetFullOutputs() {
+            document.getElementById('totalCost').textContent = '₹0';
+            document.getElementById('coalCostLabel').textContent = '₹0';
+            document.getElementById('reCostLabel').textContent = '₹0';
+            document.getElementById('savingsAmount').textContent = '₹0';
+            document.getElementById('coalEmissionLabel').textContent = '0 kg';
+            document.getElementById('reEmissionLabel').textContent = '0 kg';
+            document.getElementById('emissionsReduction').textContent = '0%';
+            
+            document.getElementById('coalCostBar').style.height = '0px';
+            document.getElementById('reCostBar').style.height = '0px';
+            document.getElementById('coalEmissionBar').style.height = '0px';
+            document.getElementById('reEmissionBar').style.height = '0px';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        // Initialize
+        drawGauge(0);
+    </script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Design Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f7f8fa;
+      color: #333;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      min-height: 100vh;
+    }
+    .inputs {
+      background: #fff;
+      padding: 20px;
+      border-right: 1px solid #ccc;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .inputs label {
+      display: flex;
+      flex-direction: column;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .note {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    .inputs input, .inputs select {
+      padding: 6px;
+      font-size: 14px;
+    }
+    .inputs button {
+      margin-top: 10px;
+      padding: 8px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .outputs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px,1fr));
+      gap: 16px;
+      padding: 20px;
+    }
+    .card {
+      background: #fff;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .card h3 { margin-top: 0; }
+    .huge {
+      font-size: 32px;
+      font-weight: bold;
+    }
+    .huge small {
+      font-size: 16px;
+      color: #666;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="layout">
+    <!-- Inputs -->
+    <div class="inputs">
+      <div>
+        <label for="ZetNum">Number of ZETs in a day </label>
+        <!-- <div class="note">Please enter a numeric value for Input 1</div> -->
+        <input type="number" name="ZetNum" id="ZetNum" >
+      </div>
+      <div>
+        <label for="highwayLength">Length of the Highway (km) </label>
+        <!-- <div class="note">Please enter a numeric value for Input 2</div> -->
+        <input type="number" name="highwayLength" id="highwayLength">
+      </div>
+      <div>
+        <label for="state">Select your State</label>
+        <select id="state">
+          <option value="">--Select--</option>
+          <option value="TN">Tamil Nadu</option>
+          <option value="KA">Karnataka</option>
+        </select>
+      </div>
+      <div>
+        <label for="investmentType">Select your Investment Type</label>
+        <select id="investmentType">
+          <option value="">--Select--</option>
+          <option value="C">Captive</option>
+          <option value="GC">Group Captive</option>
+        </select>
+      </div>
+      <button onclick="updateOutputs()">Update</button>
+    </div>
+
+    <!-- Outputs -->
+    <div class="outputs">
+      <div class="card">
+        <h3>Output 1: Gauge (Input 1)</h3>
+        <canvas id="gaugeChart"></canvas>
+        <p id="gaugeVal"></p>
+      </div>
+
+      <div class="card">
+        <h3>Output 2: From Input 1 & 2</h3>
+        <p>Value A: <span id="out2a"></span></p>
+        <p>Value B: <span id="out2b"></span></p>
+      </div>
+
+      <div class="card">
+        <h3>Output 3: From Input 1</h3>
+        <p id="out3"></p>
+      </div>
+
+      <div class="card">
+        <h3>Output 4: Huge Value + Suffix</h3>
+        <p class="huge"><span id="out4"></span> <small id="suffix"></small></p>
+      </div>
+
+      <div class="card">
+        <h3>Output 5: Cost Comparison (Input 2 & 4)</h3>
+        <canvas id="costChart"></canvas>
+        <p id="savings"></p>
+      </div>
+
+      <div class="card">
+        <h3>Output 6: % Decrease (Input 1 & 3)</h3>
+        <canvas id="decChart"></canvas>
+        <p id="pctDec"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let gaugeChart, costChart, decChart;
+
+    function updateOutputs() {
+      const input1 = parseFloat(document.getElementById('input1').value);
+      const input2 = parseFloat(document.getElementById('input2').value);
+      const input3 = document.getElementById('input3').value;
+      const input4 = document.getElementById('input4').value;
+
+      if (isNaN(input1) || isNaN(input2)) {
+        alert("Please enter values for Input 1 and Input 2");
+        return;
+      }
+
+      // Output 1: Gauge
+      const gaugeVal = Math.max(0, Math.min(100, input1));
+      document.getElementById("gaugeVal").textContent = gaugeVal.toFixed(2) + "%";
+
+      if (gaugeChart) gaugeChart.destroy();
+      gaugeChart = new Chart(document.getElementById("gaugeChart"), {
+        type: "doughnut",
+        data: { datasets: [{ data: [gaugeVal, 100-gaugeVal], backgroundColor: ["#4cafef","#ddd"] }] },
+        options: { circumference: 180, rotation: 270, cutout: "70%", plugins: {legend:{display:false}, tooltip:{enabled:false}} }
+      });
+
+      // Output 2
+      document.getElementById("out2a").textContent = input1;
+      document.getElementById("out2b").textContent = input2;
+
+      // Output 3
+      document.getElementById("out3").textContent = input1;
+
+      // Output 4
+      const huge = input1 * 1000;
+      document.getElementById("out4").textContent = huge.toFixed(2);
+      document.getElementById("suffix").textContent = input4;
+
+      // Output 5: Cost comparison
+      const baselineCosts = {rupees:150, dollars:200, euros:250};
+      const baseline = baselineCosts[input4];
+      const saving = baseline - input2;
+      document.getElementById("savings").textContent = "Savings: " + saving.toFixed(2);
+
+      if (costChart) costChart.destroy();
+      costChart = new Chart(document.getElementById("costChart"), {
+        type:"bar",
+        data:{labels:["Baseline","Current"],datasets:[{data:[baseline,input2],backgroundColor:["#888","#4cafef"]}]},
+        options:{plugins:{legend:{display:false}}}
+      });
+
+      // Output 6: % decrease
+      const base3 = {opt_a:100, opt_b:200, opt_c:300}[input3];
+      const pctDec = base3 ? ((base3 - input1)/base3*100) : 0;
+      document.getElementById("pctDec").textContent = "% Decrease: " + pctDec.toFixed(2) + "%";
+
+      if (decChart) decChart.destroy();
+      decChart = new Chart(document.getElementById("decChart"), {
+        type:"bar",
+        data:{labels:["Baseline","Value"],datasets:[{data:[base3,input1],backgroundColor:["#888","#4cafef"]}]},
+        options:{plugins:{legend:{display:false}}}
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CoZET Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f4f8fb;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-top: 40px;
+            margin-bottom: 30px;
+        }
+
+        .dashboard-container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center; 
+        }
+
+        .tile {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+            padding: 30px 40px;
+            margin-bottom: 24px;
+        }
+
+        .info-icon {
+            display: inline-block;
+            position: relative;
+            color: #2980b9;
+            cursor: pointer;
+            font-style: normal;
+            font-size: 0.95em;
+            margin-left: 6px; 
+        }
+
+        .info-icon .tooltip-text {
+            visibility: hidden;
+            width: 220px;
+            background-color: #666363;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%; /* Show above the icon */
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-size: 0.95em;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+        }
+
+        .info-icon:hover .tooltip-text,
+        .info-icon:focus .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .tile-row {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            margin-bottom: 32px; 
+            width: 100%;
+            max-width: 900px;
+            box-sizing: border-box; 
+        }
+
+
+        .tile-output {
+            width: 260px;
+            min-width: 260px;
+            max-width: 260px;
+            text-align: center;
+            margin-bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+
+        .tile-input {
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 32px;
+            box-sizing: border-box;
+        }
+
+        .tile-output h2 {
+            color: #2980b9;
+            margin-bottom: 18px;
+            font-size: 1.3em;
+        }
+
+        .tile-output p {
+            font-size: 1.5em;
+            color: #2d3436;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        /* Form styles */
+        form label {
+            display: block;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-weight: 500;
+        }
+
+        form input[type="number"],
+        form select {
+            width: 100%;
+            padding: 8px 10px;
+            margin-bottom: 18px;
+            border: 1px solid #bfc9d1;
+            border-radius: 5px;
+            font-size: 16px;
+            background: #f7fafc;
+        }
+
+        form input[type="submit"],
+        form input[type="reset"] {
+            padding: 10px 22px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #2980b9;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        form input[type="reset"] {
+            background-color: #e74c3c;
+        }
+
+        form input[type="submit"]:hover {
+            background-color: #3498db;
+        }
+
+        form input[type="reset"]:hover {
+            background-color: #c0392b;
+        }
+
+        /* Slider styles */
+        .slidecontainer {
+            width: 100%;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .slider {
+            width: 100%;
+            height: 18px;
+            background: #dfe6e9;
+            outline: none;
+            border-radius: 5px;
+            margin-top: 8px;
+            accent-color: #27ae60;
+        }
+
+        #solarValue {
+            font-size: 18px;
+            min-width: 32px;
+            text-align: center;
+        }
+
+        /* Responsive design */
+        @media (max-width: 900px) {
+            .tile-row {
+                flex-direction: column;
+                gap: 16px;
+                max-width: 100%;
+                width: 100%;
+            }
+            .tile-output {
+                max-width: 100%;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <h1>CoZet Dashboard</h1>
+    <div class="dashboard-container">
+        <div class="tile tile-input">
+        <form method="post" action="{{ url_for('section1_result')}}" id="calculator_form">
+            
+                <label for="ZetNum">Number of ZETs in a day </label>
+                <input type="number" name="ZetNum" id="ZetNum" value="{{ ZetNum if ZetNum is defined else '' }}">
+                <br/>
+                <label for="highwayLength">Length of the Highway (km) </label>
+                <input type="number" name="highwayLength" id="highwayLength" value="{{ highwayLength if highwayLength is defined else '' }}">
+                <br/>
+                <label for="state">Select your State</label>
+                <select id="state" name="state">
+                    <option value="">--Select--</option>
+                    <option value="TN" {% if state == 'TN' %}selected{% endif %}>Tamil Nadu</option>
+                    <option value="KA" {% if state == 'KA' %}selected{% endif %}>Karnataka</option>
+                </select>
+                <br/>
+                <!-- <label for="investmentType">Select your Investment Type</label> --> 
+                <label for="investmentType">
+                        Select your Investment Type
+                        <span class="info-icon" tabindex="0">&#x1F6C8; 
+                            <span class="tooltip-text">
+                                <strong>Captive Power plants (CPPs)</strong> are owned by a single entity with full upfront investment.<br>
+                                <br/>
+                                <strong>Group Captive Power plants (GCPPs)</strong> allows shared investment by multiple entities, with participants owning at least 26% and consuming 51% of the generated power.
+                            </span>
+                        </span>
+                </label>
+                <select id="investmentType" name="investmentType">
+                    <option value="">--Select--</option>
+                    <option value="C" {% if investmentType == 'C' %}selected{% endif %}>Captive</option>
+                    <option value="GC" {% if investmentType == 'GC' %}selected{% endif %}>Group Captive</option>
+                </select>
+                <br/>
+                <label for="solar">Solar (%) </label>
+                <div class="slidecontainer">
+                    <input type="range" min="1" max="100" value="{{ solar if solar is defined else 50 }}" class="slider" id="solar" name="solar" oninput="updateSolarValue(this.value)">
+                    <span id="solarValue">{{ solar if solar is defined else 50 }}</span>%
+                </div>
+                <br/>
+
+                <input type="submit" value="Submit"/>
+                <input type="reset"  value="RESET"/>
+            </form>
+        </div>
+        <div class="tile-row">
+        <div class="tile tile-output">
+            <h2>Energy Required per day</h2>
+            <!-- <p id="energy_required_per_day_output" class="output-value"></p> -->
+                    {% if calculation_success == True %}
+                        <!-- <p>{{energy_required_per_day}} kWh/day</p> -->
+                        <p id="energy_required_per_day_output" class="output-value">{{energy_required_per_day}} kWh/day</p>
+                    {% elif calculation_success == False %}
+                        <p id="energy_required_per_day_output" class="output-value">{{error}}</p>
+                        <!-- <p>{{error}}</p> -->
+                    {% else %}
+                        <p id="energy_required_per_day_output" class="output-value">--</p>
+                        <!-- <p>--</p> -->
+            {% endif %}
+        </div>
+        <div class="tile tile-output">
+            <h2>Required RE Capacity</h2>
+            <!-- <p id="required_re_capacity_output" class="output-value"></p> -->
+            {% if calculation_success == True %}
+                <p id="required_re_capacity_output" class="output-value">Solar: {{required_re_capacity_solar}} MW</p>
+                <p id="required_re_capacity_output" class="output-value">Wind: {{required_re_capacity_wind}} MW</p>
+                <p id="required_re_capacity_output" class="output-value">Total: {{required_re_capacity}} MW</p>
+            {% elif calculation_success == False %}
+                <p id="required_re_capacity_output" class="output-value">{{error}}</p>
+            {% else %}
+                <p id="required_re_capacity_output" class="output-value">--</p>
+            {% endif %}
+        </div>
+        <div class="tile tile-output">
+            <h2>Land Required</h2>
+            <!-- <p id="land_required_output" class="output-value"></p> -->
+            {% if calculation_success == True %}
+                <p id="land_required_output" class="output-value">{{total_land_required_for_re_infrastructure}} acres</p>
+            {% else %}
+                <p id="land_required_output" class="output-value">--</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="tile-row">
+        <div class="tile tile-output">
+            <h2>Annual Cost Savings</h2>
+            <!-- <p id="annual_cost_savings_output" class="output-value"></p> -->
+            {% if calculation_success == True %}
+                <p id="annual_cost_savings_output" class="output-value">₹{{annual_cost_savings}}</p>
+            {% else %}
+                <p id="annual_cost_savings_output" class="output-value">--</p>
+            {% endif %}
+        </div>
+        <div class="tile tile-output">
+            <h2>CO2 Emissions</h2>
+            <!-- <p id="co2_emissions_output" class="output-value"></p> -->
+            {% if calculation_success == True %}
+                <p id="co2_emissions_output" class="output-value">Grid: {{emissions_for_coal_powered}} tCO2</p>
+                <p id="co2_emissions_output" class="output-value">RE: {{emissions_for_re_powered}} tCO2</p>
+            {% else %}
+                <p id="co2_emissions_output" class="output-value">--</p>
+            {% endif %}
+        </div>
+        <div class="tile tile-output">
+            <h2>CO2 Emissions Reduced by</h2>
+            <!-- <p id="emissions reduced_by_output" class="output-value"></p> -->
+            {% if calculation_success == True %}
+                <p id="co2_emissions_output" class="output-value">{{percentage_decrease_in_emissions}} %</p>
+            {% else %}
+                <p id="co2_emissions_output" class="output-value">--</p>
+            {% endif %}
+        </div>
+    </div class ="tile-row">
+        <div class ="tile tile-output">
+            <h2>Total Cost</h2>
+            <!-- <p id="total_cost_output" class="output-value"></p> -->
+            {% if calculation_success == True %}
+                <p id="total_cost_output" class="output-value">₹{{total_cost_incurred}}</p>
+            {% elif calculation_success == False %}
+                <p id="total_cost_output" class="output-value">{{error}}</p>
+            {% else %}
+                <p id="total_cost_output" class="output-value">--</p>
+            {% endif %}
+        </div>
+    </div>
+    <script>
+        // Tooltip for info icon
+        document.querySelectorAll('.info-icon').forEach(function(icon) {
+            icon.addEventListener('mouseenter', function() {
+                this.querySelector('.tooltip-text').style.display = 'block';
+            });
+            icon.addEventListener('mouseleave', function() {
+                this.querySelector('.tooltip-text').style.display = 'none';
+            });
+            icon.addEventListener('focus', function() {
+                this.querySelector('.tooltip-text').style.display = 'block';
+            });
+            icon.addEventListener('blur', function() {
+                this.querySelector('.tooltip-text').style.display = 'none';
+            });
+        });
+
+        // Indian number formatting
+        function number_format(number) {
+            n = Math.floor(Number(number));
+            let s = n.toString();
+            let afterPoint = '';
+            if(s.indexOf('.') > 0)
+                afterPoint = s.substring(s.indexOf('.'),s.length);
+            s = s.split('.')[0];
+            let lastThree = s.substring(s.length-3);
+            let otherNumbers = s.substring(0,s.length-3);
+            if(otherNumbers != '')
+                lastThree = ',' + lastThree;
+            let res = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + lastThree + afterPoint;
+            return res;
+        }
+
+        // Update slider value display
+        function updateSolarValue(val) {
+            document.getElementById('solarValue').textContent = val;
+        }
+
+        function calculateOutputs(form) {
+            const number_of_zets_per_day = Number(form.ZetNum.value) || 0;
+            const length_of_highway = Number(form.highwayLength.value) || 0;
+            const state_name = form.state.value || '';
+            const solar_percentage = Number(form.solar.value) || 0;
+            const investment_type = form.investmentType.value || '';
+
+            const tax_percentage = 0.01 * 5;
+            const per_unit_dg_cost = 31.33;
+            const meter_rent = 3965;
+            const converter_cost_per_kw = 3700;
+            const re_maintenance_cost_percent = 1.4 * 0.01;
+            const grid_per_unit_emissions = 0.727;
+            const wind_per_unit_emissions = 0.126;
+            const solar_per_unit_emissions = 0.045;
+            const wind_per_unit_group_captive = 4.52;
+            const solar_per_unit_group_captive = 4.57;
+
+            const truck_capacity = 230;
+            const truck_range = 208;
+            const charge_available_in_vehicle = 50 * 0.01;
+            const solar_output_per_kw = 4.5;
+            const wind_output_per_kw = 7.2;
+            const captive_solar_per_mw = 34400000;
+            const captive_wind_per_mw = 80500000; 
+            const group_captive_solar_per_mw = 3200000;
+            const group_captive_wind_per_mw = 7000000;
+            const land_required_solar_per_mw = 3.5;
+            const land_required_wind_per_mw = 1.5;
+
+            frequency_of_charging = (length_of_highway) / truck_range;
+
+            if (frequency_of_charging > 1){
+                no_of_vehicles_to_charge_per_day = (number_of_zets_per_day * charge_available_in_vehicle) + (number_of_zets_per_day * (frequency_of_charging - 1));
+            }
+            else {
+                no_of_vehicles_to_charge_per_day = number_of_zets_per_day * frequency_of_charging * charge_available_in_vehicle;
+            }
+            
+            energy_required_per_day = truck_capacity * no_of_vehicles_to_charge_per_day;
+
+            required_re_capacity = (((energy_required_per_day * solar_percentage) / solar_output_per_kw) + ((energy_required_per_day * (1 - solar_percentage)) / wind_output_per_kw)) / 1000;
+            required_re_capacity_solar = ((energy_required_per_day * solar_percentage) / solar_output_per_kw) / 1000;
+            required_re_capacity_wind = ((energy_required_per_day * (1 - solar_percentage)) / wind_output_per_kw) / 1000;
+            
+            energy_required_per_hour = energy_required_per_day / 24;
+            demand_kw = 500 * round(energy_required_per_hour / 500);
+            total_converter_cost = converter_cost_per_kw * 2 * demand_kw;
+
+            if (state_name === 'TN') {
+                const per_unit_grid_rate = 8.2;
+                const demand_charges = 145;
+                const grid_avg_rate_DG = 9.06;
+                const solar_tnd = 1.25;
+                const wind_tnd = 1.19;              
+            } 
+            else if (state_name === 'KA') {
+                const per_unit_grid_rate = 7.4;
+                const demand_charges = 80;
+                const grid_avg_rate_DG = 9.98;
+                const solar_tnd = 1.31;
+                const wind_tnd = 1.43;
+            }
+            
+            coal_powered_cost_per_month = (((energy_required_per_day * 0.95 * per_unit_grid_rate) + 
+                                       (energy_required_per_day * 0.05 * per_unit_DG_cost) + 
+                                       (demand_kw * demand_charges) + 
+                                       meter_rent) * 30);
+
+            if (investment_type === "C") {
+                re_total_cost = ((captive_solar_per_mw * required_re_capacity_solar) + (captive_wind_per_mw * required_re_capacity_wind));
+                
+                re_cost_per_month = (((energy_required_per_day * 0.075 * 8.2) +
+                                    (energy_required_per_day * 0.025 * per_unit_DG_cost) +
+                                    (demand_kw * demand_charges) + 
+                                    meter_rent +
+                                    (energy_required_per_day * 0.9 * solar_percentage * solar_tnd) +
+                                    (energy_required_per_day * 0.9 * (1 - solar_percentage) * wind_tnd)) * 30);
+                
+                total_investment_converter_maintenance = (total_converter_cost + re_total_cost + (re_total_cost * re_maintenance_cost_percent));
+                
+                total_cost_incurred = (((((energy_required_per_day * solar_percentage) / (solar_output_per_kw)) / 1000) * captive_solar_per_mw) + 
+                                ((((energy_required_per_day * (1 - solar_percentage)) / (wind_output_per_kw)) / 1000) * captive_wind_per_mw));
+
+            }
+
+            else if (investment_type === "GC") {
+                re_total_cost = ((group_captive_solar_per_mw * required_re_capacity_solar) + 
+                                (group_captive_wind_per_mw * required_re_capacity_wind));
+                
+                re_cost_per_month = (((energy_required_per_day * 0.075 * 8.2) +
+                                    (energy_required_per_day * 0.025 * per_unit_DG_cost) +
+                                    (demand_kw * demand_charges) + 
+                                    meter_rent +
+                                    (energy_required_per_day * 0.9 * solar_percentage * solar_per_unit_group_captive) +
+                                    (energy_required_per_day * 0.9 * (1 - solar_percentage) * wind_per_unit_group_captive)) * 30);
+                
+                total_investment_converter_maintenance = (total_converter_cost + re_total_cost);
+                total_cost_incurred = (((((energy_required_per_day * solar_percentage) / (solar_output_per_kw)) / 1000) * group_captive_solar_per_mw) + 
+                                ((((energy_required_per_day * (1 - solar_percentage)) / (wind_output_per_kw)) / 1000) * group_captive_wind_per_mw));
+            }
+
+        
+        total_land_required_for_re_infrastructure = ((land_required_solar_per_mw * required_re_capacity_solar) + 
+                                                     (land_required_wind_per_mw * required_re_capacity_wind));
+
+        
+        annual_cost_savings = ((coal_powered_cost_per_month - re_cost_per_month) * 12);
+
+       
+        emissions_for_coal_powered = (energy_required_per_day * 0.03 * grid_per_unit_emissions);
+        emissions_for_re_powered = ((energy_required_per_day * 0.03 * wind_per_unit_emissions * (1 - solar_percentage)) +
+                                    (energy_required_per_day * 0.03 * solar_per_unit_emissions * solar_percentage));
+        
+       
+        percentage_decrease_in_emissions = (((emissions_for_coal_powered - emissions_for_re_powered) / emissions_for_coal_powered) * 100);
+
+        
+        energy_required_per_day = Math.round(energy_required_per_day);
+        required_re_capacity = Math.round(required_re_capacity);
+        
+        
+        total_cost_incurred = Math.round(total_cost_incurred);                    
+
+        
+        total_land_required_for_re_infrastructure = Math.round(total_land_required_for_re_infrastructure);
+
+        annual_cost_savings = Math.round(annual_cost_savings);
+
+        emissions_for_coal_powered = Math.round(emissions_for_coal_powered);
+        emissions_for_re_powered = Math.round(emissions_for_re_powered);
+
+        percentage_decrease_in_emissions = Math.round(percentage_decrease_in_emissions);
+
+        required_re_capacity_solar = Math.round(required_re_capacity_solar);
+        required_re_capacity_wind = Math.round(required_re_capacity_wind);
+
+
+            return {
+                ZetNum: number_of_zets_per_day,
+                highwayLength: length_of_highway,
+                state: state_name,
+                investmentType: investment_type,
+                solar: Math.round(solar_percentage * 100),
+                wind: Math.round((100 - solar_percentage) * 100),
+
+
+                energy_required_per_day: energy_required_per_day,
+                required_re_capacity: required_re_capacity,
+                required_re_capacity_solar: required_re_capacity_solar,
+                required_re_capacity_wind: required_re_capacity_wind,
+
+                total_cost_incurred: number_format(total_cost_incurred),
+                total_land_required_for_re_infrastructure: total_land_required_for_re_infrastructure,
+
+                annual_cost_savings: number_format(annual_cost_savings),
+
+                emissions_for_coal_powered: emissions_for_coal_powered,
+                emissions_for_re_powered: emissions_for_re_powered,
+                percentage_decrease_in_emissions: percentage_decrease_in_emissions,
+
+                calculation_success: True
+            };
+        }
+
+        // Handle form submit
+        document.getElementById('calculator_form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const outputs = calculateOutputs(this);
+            document.getElementById('energy_required_output').textContent = outputs.energy_required;
+            document.getElementById('total_cost_output').textContent = outputs.total_cost;
+            document.getElementById('land_required_output').textContent = outputs.land_required;
+            document.getElementById('annual_cost_savings_output').textContent = outputs.annual_cost_savings;
+            document.getElementById('co2_emissions_output').textContent = outputs.co2_emissions;
+            document.getElementById('co2_emissions_reduced_output').textContent = outputs.co2_emissions_reduced;
+            document.getElementById('additional_output').textContent = outputs.additional_output;
+        });
+
+        // Handle form reset
+        document.getElementById('calculator_form').addEventListener('reset', function() {
+            setTimeout(function() {
+                document.getElementById('ZetNum').value = '';
+                document.getElementById('highwayLength').value = '';
+                document.getElementById('state').selectedIndex = 0;
+                document.getElementById('investmentType').selectedIndex = 0;
+                document.getElementById('solar').value = 50;
+                updateSolarValue(50);
+
+                document.getElementById('energy_required_output').textContent = '--';
+                document.getElementById('total_cost_output').textContent = '--';
+                document.getElementById('land_required_output').textContent = '--';
+                document.getElementById('annual_cost_savings_output').textContent = '--';
+                document.getElementById('co2_emissions_output').textContent = '--';
+                document.getElementById('co2_emissions_reduced_output').textContent = '--';
+                document.getElementById('additional_output').textContent = '--';
+            }, 0);
+        });
+
+        // Set initial slider value
+        updateSolarValue(document.getElementById('solar').value);
+    </script>
+</body>
+</html>
