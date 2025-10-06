@@ -1,0 +1,442 @@
+# -*- coding: utf-8 -*-
+"""
+input file : one time data of all bins at once <bin|vin|session|time|startSOC|endSOC|chgEnergy|consumedE|chargingDuration
+                                                SOH|lifecycle>
+
+
+"""
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import sys
+sys.path.append('D:\\Benisha\\Code files')
+sys.path.append("D:\\Benisha\\Battery DCA\\Mohali_data")
+from sklearn import linear_model
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import Pipeline, make_pipeline
+import statistics as  stat
+import os
+
+from Functions import SOH_Estimation_by_SOC_window
+import statistics
+import matplotlib.cm as cm
+from Functions import Add_Cycle_nos_to_One_time_data
+from Functions import Clean_One_time_data
+from Functions import Estimate_Pack_Capacity_One_time_data
+import SOH_estimation_by_Temperature_Time
+
+regr = linear_model.LinearRegression()
+
+def movingaverage(values,window):
+    weights = np.repeat(1.0,window)/window
+    smas = np.convolve(values,weights,'valid')
+    return smas
+
+def SOH_estimation(file_path):
+#    file_path="D:\\Benisha\\Battery DCA\\Mohali_Esmito_Binwise\\OTD_Merged_Summary_files\\OTD_Merged_Summary_file.csv"
+#file_path="D:\\Benisha\\Battery DCA\\IITM data\\iitm_driving_charging_data\\OTD_Merged_Summary_files\\OTD_Merged_Summary_file_INCBE0010223H3005409.csv"
+    df=pd.read_csv(file_path,header=0,sep=',')
+    print(df.dtypes)
+    df.time = pd.to_datetime(df.time)
+    df['Avg_temp'] = df[["start_Avg_Temp","end_Avg_Temp"]].max(axis=1)
+    
+    df.loc[df['Session_Type'] == 'Rest', 'Avg_temp'] = df[['start_Avg_Temp','end_Avg_Temp']].min(axis=1) ; # - 2
+    df=df[df.Time_Estimate<=178560] # time less than 4 months
+    
+    
+    cols=['bin','nc_bms','SOH_BMS','nc_otd','SOH_otd','nc_cell_testing','SOH_cell_testing']    
+    data=pd.DataFrame(columns=cols, index=df.index)
+    
+    folder_path='\\'.join(file_path.split('\\')[0:-2])
+    folder_path=folder_path+'\\SOH_Capacity_Graphs_all_bins_code_merged_otd'
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    
+    eol = 80
+    pack_usable_kWh = 1000 # mohali 1000, zomato 1000, is made dynamic; 
+    
+    #%%
+    grouped_bins=df.groupby('bin',sort=False)
+    bins=[g[0] for g in list(grouped_bins)]
+    result=[g[1] for g in list(grouped_bins)]
+    
+    
+    #%%
+    #Enable only if files are not separated in folders
+    for j in bins:
+        fin_path=folder_path+'\\'+j
+        if not os.path.exists(fin_path):
+            os.makedirs(fin_path) 
+    #    fin_path=folder_path+'\\'+bin_val
+    #    if not os.path.exists(fin_path):
+    #        os.makedirs(fin_path) 
+    
+    
+    #%% 
+    try:
+        
+        result = SOH_estimation_by_Temperature_Time.PHY13_SOH_estimation_by_Temperature_Time(result.copy())
+        
+        result = Clean_One_time_data(result.copy())
+        result = Add_Cycle_nos_to_One_time_data(result.copy())
+        result,pack_usable_kWh=Estimate_Pack_Capacity_One_time_data(result.copy())
+        
+    #%%    
+        for i in range (0,(len(result))):
+            result[i]['SOH_estimate'] = SOH_Estimation_by_SOC_window(result[i].chargingEnergy , result[i].startSOC, result[i].endSOC, pack_usable_kWh)
+            result[i]['Cum_cap']= result[i].chargingEnergy.cumsum()
+            result[i]['Full_Cycles']= result[i].Cum_cap / pack_usable_kWh;
+            result[i]['SOH_estimate']=result[i]['SOH_estimate'].fillna(method='ffill')
+    
+    #%% To generate file separately            
+        k=0
+         
+        for i in range (0,len(result)):
+            if(len(result[i])>0):
+                data.iloc[k]['bin']=result[i].iloc[-1]['bin']
+                data.iloc[k]['nc_bms']=result[i].iloc[-1]['lifeCycle']
+                data.iloc[k]['SOH_BMS']=result[i].iloc[-1]['SOH']
+                data.iloc[k]['nc_otd']=result[i].iloc[-1]['New_cycle_no']
+                data.iloc[k]['SOH_otd']=result[i]['SOH_estimate'][-5:].mean()
+                data.iloc[k]['nc_cell_testing']=result[i].iloc[-1]['Cycle_No_session']
+                data.iloc[k]['SOH_cell_testing']=100-result[i].iloc[-1]['Total_Degradation']
+                
+                k=k+1
+    #        for i in range (0,len(result)):
+    #            if(len(result[i])>0):
+    #                data['bin']=result[i]['bin']
+    #                data['nc_bms']=result[i]['lifeCycle']
+    #                data['SOH_BMS']=result[i]['SOH']
+    #                data['nc_otd']=result[i]['New_cycle_no']
+    #                data['SOH_otd']=result[i]['SOH_estimate']
+    #                data['nc_cell_testing']=result[i]['Cycle_No_session']
+    #                data['SOH_cell_testing']=100-result[i]['Total_Degradation']
+    #                
+    #                df_temp1=pd.concat([df_temp1,data])
+                
+    #%%   
+        col_no = 0
+        for i in range (0,len(result)):
+          if len(result[i]) > 10:
+            col_no = col_no+1;
+        
+        
+        colors = iter(cm.nipy_spectral(np.linspace(0,1,col_no)))
+        for i in range (0,(len(result))):
+            if len(result[i]) > 10:
+                bin_value=result[i]['bin'].iloc[0]
+                eol=80
+                mean = result[i].SOH_estimate.mean(skipna=True)
+                print(mean)
+                SD = result[i].SOH_estimate.std(skipna=True)
+                df1b = result
+                df1c = df1b
+                SOH_values_for_predn = df1b[i][df1b[i].SOH_estimate > (mean - 1 * SD)]
+                df1b[i].loc[df1b[i]['SOH_estimate'] > (mean - (1 * SD)), 'Cyc_for_est'] = df1b[i]['Full_Cycles'];
+        
+                #if (np.isnan(SOH_values_for_predn.SOH_estimate)):
+                mean1 = SOH_values_for_predn.SOH_estimate.mean(skipna=True)
+                SD1 = SOH_values_for_predn.SOH_estimate.std(skipna=True)
+                SOH_values_for_predn = df1b[i][df1b[i].SOH_estimate > (mean1 - 1 * SD1)]
+                df1b[i].loc[df1b[i]['SOH_estimate'] > (mean1 - (1 * SD1)), 'Cyc_for_est'] = df1b[i]['Full_Cycles'];
+        
+                x=range(int(SOH_values_for_predn.New_cycle_no.iloc[-1]-1),2000)
+                clr = next(colors)
+                plt.figure()
+                plt.xlabel('No of Cycles', fontweight='bold',size=10)
+                plt.ylabel('Remaining capacity (%)', fontweight='bold',size=10)
+                plt.scatter(result[i].New_cycle_no,result[i].SOH_estimate, c = clr)
+                plt.title('Battery Degradation',fontweight='bold',size=14)
+                plt.grid(linestyle='dotted')
+                plt.axhline(80,color='k', linestyle='--')
+                plt.savefig(folder_path+'\\'+bin_value+'\\'+bin_value+'_Battery_Degradation.png', format='png', dpi=1200) 
+    
+                z = np.polyfit(SOH_values_for_predn.Cyc_for_est,SOH_values_for_predn.SOH_estimate, 1)
+                p = np.poly1d(z)
+                cyc_for_eol = int((eol-p[0])/p[1])
+                if cyc_for_eol > 1500:
+                    cyc_for_eol = 1500
+                #print(p)
+                print(i, int(SOH_values_for_predn.New_cycle_no.iloc[-1]),round(SOH_values_for_predn.SOH_estimate.iloc[-1],2),cyc_for_eol)
+                #plt.plot(x,p(x),'--', c = clr)
+    
+            else:
+                print(i)
+             #   break
+        
+        
+        
+        for i in range (0,(len(result))):
+            if(len(result[i])>0):
+                gp = result[i][:] #grouped_bins.get_group('INEXC0010202K2303809')
+        #            bin_no = result[i][0:1]
+                binno=result[i]['bin'].iloc[0]
+                plt.figure()
+                plt.scatter(gp.time,gp.SOH,s=25, color='green')
+                plt.scatter(gp.time,gp.SOH_estimate,s=25, color='orange')
+                plt.scatter(gp['end_Time'],100-gp.Total_Degradation)
+                plt.xlabel('Time', fontweight='bold',size=10)
+                plt.ylabel('% Usable Capacity', fontweight='bold',size=10)
+                plt.title('Capacity degradation',fontweight='bold',size=14)
+                plt.grid(linestyle='dotted')
+                plt.legend(['SOH_BMS estimate','SOH_Server estimate','SOH_by_States'])
+                #'I,V vs Time_Ch_'+str(df1[i]['Channel No'].iloc[0])+'_Step_'+str(df1[i]['Step No'].iloc[0])
+                plt.savefig(folder_path+'\\'+binno+'\\'+binno+'_Capacity_Degradation_Time_Vs_SOH.png', format='png', dpi=1200)
+           
+                plt.figure()
+                plt.scatter(gp.lifeCycle,gp.SOH,s=25, color='green')
+                plt.scatter(gp.New_cycle_no,gp.SOH_estimate,s=25, color='orange')
+                plt.scatter(gp['Cycle_No_session'],100-gp.Total_Degradation)
+                plt.xlabel('Cycle Number', fontweight='bold',size=10)
+                plt.ylabel('% Usable Capacity', fontweight='bold',size=10)
+                plt.title('Capacity degradation',fontweight='bold',size=14)
+                plt.legend(loc=2, prop={'size':10})
+                plt.legend(['SOH_BMS_Estimate','SOH_Estimate','SOH_by_States'])#])
+                plt.grid(linestyle='dotted')
+                plt.savefig(folder_path+'\\'+binno+'\\'+binno+'_Capacity_Degradation_CycleNo_Vs_SOH.png', format='png', dpi=1200)
+                
+                binno=''
+            
+    
+    
+           # plt.figure()
+          # plt.scatter(gp.time,gp.lifeCycle,s=25, color='red')  # check for cycle no jump
+            #plt.savefig('D:\\Academic\\Python\\Python SOH\\Results\\Zomato_OneTimeData_'+str(result[i][:].bin.iloc[0])+'_SOH_'+str(len(result[i][:]))+'Cycles'+'.pdf')#,  format='png', dpi=1200)
+            #plt.savefig('D:\\Academic\\Python\\Python SOH\\Results\\Zomato_OneTimeData_'+str(result[i][:].bin.iloc[0])+'_SOH_'+str(len(result[i][:]))+'Cycles'+'.ps')
+            #plt.savefig('D:\\Academic\\Python\\Python SOH\\Results\\Zomato_OneTimeData_'+str(result[i][:].bin.iloc[0])+'_SOH_'+str(len(result[i][:]))+'Cycles'+'.png',dpi=1200)#, format='png', dpi=1200)
+    #     save all bin graphs
+        try:
+            for i in range (0,len(result)):
+                if(len(result[i])>0):
+                    gp = result[i][:] #grouped_bins.get_group('INEXC0010202K2303809')
+                    print(i)
+                #         bin_no = result[i][0:1]
+                    bin_no = result[i]['bin'].iloc[0]
+                     #plt.scatter(gp.time,gp.SOH,s=25, color='green')
+                     #plt.scatter(gp.time,gp.SOH_estimate,s=25, color='orange')
+                     #plt.xlabel('Time', fontweight='bold',size=10)
+                     #plt.ylabel('% Usable Capacity', fontweight='bold',size=10)
+                     ##plt.title('Capacity degradation',fontweight='bold',size=14)
+                     #plt.grid(linestyle='dotted')
+                     #plt.legend('SOH_BMS estimate','SOH_Server estimate')
+                     #'I,V vs Time_Ch_'+str(df1[i]['Channel No'].iloc[0])+'_Step_'+str(df1[i]['Step No'].iloc[0])
+                     #plt.savefig('D:\\Academic\\Python\\Python SOH\\Results\\BIN_ID_'+str(gp.bin.iloc[0])+'SOH'+'.png', format='png', dpi=1200)
+                    
+                    plt.figure()
+                    plt.scatter(gp.lifeCycle,gp.SOH,s=25, color='green')
+                    plt.scatter(gp.New_cycle_no,gp.SOH_estimate,s=25, color='orange')
+                    plt.scatter(gp['Cycle_No_session'],100-gp.Total_Degradation)
+                    plt.xlabel('Cycle Number', fontweight='bold',size=10)
+                    plt.ylabel('% Usable Capacity', fontweight='bold',size=10)
+                    plt.title('Capacity degradation',fontweight='bold',size=14)
+                    plt.legend(['SOH_BMS estimate','SOH_Server estimate','SOH_by_States'])
+                    plt.grid(linestyle='dotted')
+                    plt.savefig(folder_path+'\\'+bin_no+'\\BIN_ID_'+str(gp.bin.iloc[0])+'_SOH_estimates_'+str(gp.New_cycle_no.iloc[-1].astype(int))+'_Cycles'+'.png',  format='png', dpi=1200)
+                    
+                # for BMS prredn
+                    X1 = gp['lifeCycle']
+                    Y1 = gp['SOH']    #series type
+                    X2 = gp['New_cycle_no']
+                    Y2 = gp['SOH_estimate']
+                    X3 = gp['Cycle_No_session']
+                    Y3 = 100-gp.Total_Degradation
+                    
+                    X1=X1.values.reshape(len(X1),1)  # numpy arrays
+                    Y1=Y1.values.reshape(len(Y1),1)
+                    X2=X2.values.reshape(len(X2),1)
+                    Y2=Y2.values.reshape(len(Y2),1)
+                    X3=X3.values.reshape(len(X3),1)
+                    Y3=Y3.values.reshape(len(Y3),1)
+                    # Split the data into training/testing sets
+                    #    X1_train = X1[:-25] # all samples except last 50
+                    #    X1_test = X1[-25:]  # last 50 points
+                    #    
+                    #    X2_train = X2[:-25]
+                    #    X2_test = X2[-25:]
+                    #    
+                    #    # Split the targets into training/testing sets
+                    #    Y1_train = Y1[:-25]
+                    #    Y1_test = Y1[-25:]
+                    #    
+                    #    Y2_train = Y2[:-25]
+                    #    Y2_test = Y2[-25:]
+                    
+                    
+                    X1_train = X1[:-5] # all samples except last 50
+                    X1_test = X1[-5:]  # last 50 points
+                    
+                    X2_train = X2[:-5]
+                    X2_test = X2[-5:]
+                    
+                    X3_train = X3[:-5]
+                    X3_test = X3[-5:]
+                    
+                    # Split the targets into training/testing sets
+                    Y1_train = Y1[:-5]
+                    Y1_test = Y1[-5:]
+                    
+                    Y2_train = Y2[:-5]
+                    Y2_test = Y2[-5:]
+                    
+                    Y3_train = Y3[:-5]
+                    Y3_test = Y3[-5:]
+                    
+                   
+                
+                    # Create linear regression object
+                    regr = linear_model.LinearRegression()
+                    regr1 = linear_model.LinearRegression()
+                    regr2= linear_model.LinearRegression()
+                    # Train the model using the training sets
+                    regr.fit(X1_train, Y1_train)
+                    regr1.fit(X2_train, Y2_train)
+                    regr2.fit(X3_train, Y3_train)
+                    # Plot outputs
+                    #plt.plot(X1_test, regr.predict(X1_test), color='red',linewidth=3)
+                    #plt.show()
+                    
+                    l=np.zeros((200, 1))
+                    for i in range(len(l)):
+                      l[i] = i
+                    plt.figure()
+                    plt.plot(l, regr.predict(l), color='green',linewidth=3,label='SOH_BMS')
+                    plt.plot(l, regr1.predict(l), color='orange',linewidth=3,label='SOH_Estimate')
+                    plt.plot(l, regr2.predict(l), color='red',linewidth=3,label='SOH_States')
+                    plt.legend()
+                    plt.savefig(folder_path+'\\'+bin_no+'\\'+bin_no+'_Degradation_regr_prediction_CycleNo_Vs_SOH.png', format='png', dpi=1200)
+                
+                    
+                    model_1 = make_pipeline(PolynomialFeatures(degree = 1),LinearRegression())
+                    model_1a = make_pipeline(PolynomialFeatures(degree = 2),LinearRegression())
+                    model_1.fit(X1,Y1)
+                    model_1a.fit(X2,Y2)
+                    plt.figure()
+                    plt.scatter(X1,Y1, label = 'BMS')
+                    plt.scatter(X2,Y2, label = 'Server')
+                    plt.scatter(X3,Y3, label = 'States')
+                    plt.legend()
+                    plt.savefig(folder_path+'\\'+bin_no+'\\Degradation_X1_X2_CycleNo_Vs_SOH.png', format='png', dpi=1200)
+                
+                    
+                    l1=np.zeros((200, 1))
+                    for i in range(len(l1)):
+                      l1[i] = i
+                    
+                    plt.figure()
+                    plt.plot(l1,model_1.predict(l1), color = 'green', label = 'BMS estimate')
+                    plt.plot(l1,model_1a.predict(l1), color = 'orange', label = 'Server Model')
+                    plt.title('Degradation')
+                    plt.xlabel('Cycle No'), plt.ylabel('% Capacity')
+                    plt.legend(), plt.show()
+                    plt.savefig(folder_path+'\\'+bin_no+'\\'+bin_no+'_Degradation_pipeline_model_CycleNo_Vs_SOH.png', format='png', dpi=1200)
+                    
+                    bin_no=''
+                    
+                    plt.figure()
+            for i in range(0,len(result)):
+                if(len(result[i])>0):
+                    plt.scatter(result[i].time,result[i].SOH,s=25, color='green')
+                    plt.scatter(result[i].time,result[i].SOH_estimate,s=25, color='orange')
+                    plt.xlabel('Time', fontweight='bold',size=10)
+                    plt.ylabel('% Usable Capacity', fontweight='bold',size=10)
+                    plt.title('Capacity degradation',fontweight='bold',size=14)
+                    plt.grid(linestyle='dotted')
+                    #plt.legend()
+                    #    plt.savefig('Mohali all bin soh wrt time 211.png', format='png', dpi=1200)
+                
+                    plt.figure()
+            for i in range(0,len(result)):
+                if(len(result[i])>0):
+                    plt.scatter(result[i].lifeCycle,result[i].SOH,s=25, color='green')
+                    plt.scatter(result[i].lifeCycle,result[i].SOH_estimate,s=25, color='orange')
+                    plt.xlabel('Cycle Number', fontweight='bold',size=10)
+                    plt.ylabel('% Usable Capacity', fontweight='bold',size=10)
+                    plt.title('Capacity degradation',fontweight='bold',size=14)
+                    plt.grid(linestyle='dotted')
+            #        plt.savefig(folder_path+'\\'+bin_value+'\\Degradation_LifeCycle_Vs_SOH.png', format='png', dpi=1200)
+                    #    plt.savefig('Mohali all bin soh wrt cyc no11.png', format='png', dpi=1200)
+                    plt.legend('SOC_bms','SOC_bms')
+                
+        except ValueError:
+            pass
+    #    return(data)
+    except UnboundLocalError:
+        pass
+
+
+#%%
+
+
+'''
+
+X = df.iloc[:, 11:13].values #
+y = df.iloc[:, 13].values
+poly = PolynomialFeatures(degree = 2)
+X_poly = poly.fit_transform(X)
+poly.fit(X_poly, y)
+lin2 = LinearRegression()
+lin2.fit(X_poly, y)
+plt.scatter(df.lifeCycle,df.Smooth_SOH,label='SOH_estimate from server data')
+plt.plot(X, lin2.predict(poly.fit_transform(X)), color = 'green')
+plt.xlabel('Cycle Number', fontweight='bold',size=10)
+plt.ylabel('% Usable Capacity', fontweight='bold',size=10)
+plt.title('Capacity degradation',fontweight='bold',size=14)
+plt.grid(linestyle='dotted')
+plt.legend()
+##plt.xticks(np.arange(min(x), max(x)+1, 10))
+plt.ylim(80,101)
+plt.xlim(0,130)
+plt.savefig('polyplotff.png', format='png', dpi=1200)
+plt.show()
+'''
+'''
+
+
+
+#plt.scatter(df.lifeCycle,df.Smooth_SOH,label='SOH_estimate from server data')
+#plt.scatter(df.lifeCycle,df.SOH,label='SOH_BMS')
+#plt.xlabel('Cycle Number', fontweight='bold',size=10)
+#plt.ylabel('% Usable Capacity', fontweight='bold',size=10)
+#plt.title('Capacity degradation',fontweight='bold',size=14)
+#plt.grid(linestyle='dotted')
+#plt.legend()
+#plt.xticks(np.arange(min(x), max(x)+1, 10))
+#plt.ylim(95,102)
+#plt.xlim(0,130)
+
+#df = Estimation.SOH_Estimation_by_SOC_window(df.copy())
+
+# =============================================================================
+# SOH_estimate_MovAvg = movingaverage(df.SOH_estimate,3)
+# a = np.zeros(2)
+# SOH_estimate_MovAvg = pd.Series(SOH_estimate_MovAvg)
+# a = pd.Series(a)
+# SOH_estimate_MovAvg = SOH_estimate_MovAvg.append(a)
+# smooth = pd.Series.rolling(SOH_estimate_MovAvg, 3, center = True).mean()
+# ss = np.array(smooth);
+# sss=np.asfarray(ss,float)
+#
+# df['Smooth_SOH'] = sss
+# df = df[pd.notnull(df['lifeCycle'])]
+# df = df[pd.notnull(df['Smooth_SOH'])]
+# df_orignal = df
+#
+# mean = statistics.mean(df.Smooth_SOH)
+# SD = statistics.stdev(df.Smooth_SOH)
+# print(mean,SD)
+# df1 = df
+# df1a = df[df['Smooth_SOH'] > (mean - 2 * SD)]
+# df1b = df1a[df1a['Smooth_SOH'] < (mean + 2 * SD)]
+#
+# mean = statistics.mean(df1b.Smooth_SOH)
+# SD = statistics.stdev(df1b.Smooth_SOH)
+# print(mean,SD)
+# df1c = df1b
+# df1ca = df1b[df1b['Smooth_SOH'] > (mean - 1 * SD)]
+# df1cb = df1ca[df1ca['Smooth_SOH'] < (mean + 1 * SD)]
+# =============================================================================
+
+
+plt.show()
+'''
