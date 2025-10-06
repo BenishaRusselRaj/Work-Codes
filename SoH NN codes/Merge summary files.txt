@@ -1,0 +1,9 @@
+import pandas as pd
+
+#summary files
+d1=pd.read_csv() 
+d2=pd.read_csv()
+d3=pd.read_csv()
+d4=pd.read_csv()
+
+d=pd.concat([d1,d2,d3,d4])
